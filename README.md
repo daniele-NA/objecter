@@ -1,4 +1,3 @@
-````markdown
 # Objecter 🕵️‍♂️📷
 
 **Objecter** is an Android application for **real-time object detection**. It uses **OpenCV** and **TensorFlow Lite** for native C++ image processing, while the interface and camera handling are implemented in **Kotlin** with **CameraX**.
@@ -31,7 +30,7 @@ This application **does not support Android devices requiring 16 KB aligned memo
 
 ## Setup 🔧
 
-Before building the project, unzip the provided `tools.zip` file and place its contents under the `jni/` directory in the project root:
+Before building the project,DOWNLOAD `tools.zip` from release panel file,unzip and place its contents under the `jni/` directory in the project root:
 
 ```text
 project-root/
@@ -54,6 +53,3 @@ This ensures all native dependencies are available for compilation.
 ## Preview 📸
 
 ![Library Preview](ASSETS/libraries_preview.png)
-
-```
-```
