@@ -12,6 +12,7 @@ import android.graphics.PorterDuff
 import android.os.Bundle
 import android.util.Log
 import android.util.Size
+import android.view.Surface
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.AspectRatio
@@ -43,7 +44,7 @@ class ObjectDetectionActivity : AppCompatActivity(), ImageAnalysis.Analyzer {
     private val SCORE = 0.4
 
     private external fun initDetector(assetManager: AssetManager?)
-    private external fun detect(bytes: ByteArray, width: Int, height: Int): FloatArray
+    private external fun detect(bytes: ByteArray, width: Int, height: Int,rotation:Int): FloatArray
     @FastNative
     private external fun destroyDetector()
 
@@ -58,6 +59,13 @@ class ObjectDetectionActivity : AppCompatActivity(), ImageAnalysis.Analyzer {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.decorView.apply {
+            window.insetsController?.let { controller ->
+                controller.hide(android.view.WindowInsets.Type.statusBars() or android.view.WindowInsets.Type.navigationBars())
+                controller.systemBarsBehavior =
+                    android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        }
         enableEdgeToEdge()
         binding = ActivityObjectDetectionBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -164,7 +172,7 @@ class ObjectDetectionActivity : AppCompatActivity(), ImageAnalysis.Analyzer {
         buffer.get(rgbaFrame, 0, size)
 
         val start = System.currentTimeMillis()
-        val res: FloatArray = detect( rgbaFrame, image.width, image.height)
+        val res: FloatArray = detect( rgbaFrame, image.width, image.height,binding.viewFinder.display.rotation)
         val span = System.currentTimeMillis() - start
 
         val canvas = binding.surfaceView.holder.lockCanvas()
@@ -194,48 +202,58 @@ class ObjectDetectionActivity : AppCompatActivity(), ImageAnalysis.Analyzer {
         detectionIdx: Int
     ) {
 
+
+        LOG("width => $frameWidth   , height => $frameHeight")
+
         val pos = detectionIdx * 6 + 1
         val score = detectionsArr[pos + 0]
         val classId = detectionsArr[pos + 1]
-        var xmin = detectionsArr[pos + 2]
-        var ymin = detectionsArr[pos + 3]
-        var xmax = detectionsArr[pos + 4]
-        var ymax = detectionsArr[pos + 5]
+        val xmin = detectionsArr[pos + 2]
+        val ymin = detectionsArr[pos + 3]
+        val xmax = detectionsArr[pos + 4]
+        val ymax = detectionsArr[pos + 5]
 
-        // Filter by score
         if (score < SCORE) return
 
-        // detection coords are in frame coord system, convert to screen coords
-        val scaleX = binding.viewFinder.width.toFloat() / frameWidth
-        val scaleY = binding.viewFinder.height.toFloat() / frameHeight
+        val rotation = binding.viewFinder.display.rotation
+        val rotatedWidth = if (rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) frameHeight else frameWidth
+        val rotatedHeight = if (rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) frameWidth else frameHeight
 
-        // The camera view offset on screen
-        val xoff = 0 // viewFinder.left.toFloat()
-        val yoff = 0 // viewFinder.top.toFloat()
+        val scale = minOf(
+            binding.viewFinder.width.toFloat() / rotatedWidth,
+            binding.viewFinder.height.toFloat() / rotatedHeight
+        )
+        val xoff = (binding.viewFinder.width - rotatedWidth * scale) / 2f
+        val yoff = (binding.viewFinder.height - rotatedHeight * scale) / 2f
 
-        xmin = xoff + xmin * scaleX
-        xmax = xoff + xmax * scaleX
-        ymin = yoff + ymin * scaleY
-        ymax = yoff + ymax * scaleY
+        val coordsAreNormalized = (xmin >= 0f && ymin >= 0f && xmax <= 1.01f && ymax <= 1.01f)
 
-        // Draw the rect
+        val fxmin = if (coordsAreNormalized) xmin * rotatedWidth else xmin
+        val fymin = if (coordsAreNormalized) ymin * rotatedHeight else ymin
+        val fxmax = if (coordsAreNormalized) xmax * rotatedWidth else xmax
+        val fymax = if (coordsAreNormalized) ymax * rotatedHeight else ymax
+
+        val sxmin = xoff + fxmin * scale
+        val sxmax = xoff + fxmax * scale
+        val symin = yoff + fymin * scale
+        val symax = yoff + fymax * scale
+
         val p = android.graphics.Path()
-        p.moveTo(xmin, ymin)
-        p.lineTo(xmax, ymin)
-        p.lineTo(xmax, ymax)
-        p.lineTo(xmin, ymax)
-        p.lineTo(xmin, ymin)
+        p.moveTo(sxmin, symin)
+        p.lineTo(sxmax, symin)
+        p.lineTo(sxmax, symax)
+        p.lineTo(sxmin, symax)
+        p.close()
+
+        LOG(p.toString())
 
         canvas.drawPath(p, _paint)
 
-        // classId is zero-based (meaning class id 0 is class 1)
-        val label = labelsMap[classId.toInt()]
-
+        val label = labelsMap.getOrNull(classId.toInt()) ?: "?"
         val txt = "%s (%.2f)".format(label, score)
-
-        // Draw also the element name
-        canvas.drawText(txt, xmin, ymin, _paint)
+        canvas.drawText(txt, sxmin, symin - 8f, _paint)
     }
+
 
     private fun loadLabels() {
         val labelsInput = this.assets.open("labels.txt")

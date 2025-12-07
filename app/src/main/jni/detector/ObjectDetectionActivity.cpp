@@ -36,7 +36,7 @@ Java_com_crescenzi_objecter_ObjectDetectionActivity_initDetector(JNIEnv *env, jo
     long model_size=0;
 
     assets_manager = AAssetManager_fromJava(env, java_assets);
-    AAsset *model = AAssetManager_open(assets_manager, "object.tflite", AASSET_MODE_BUFFER);
+    AAsset *model = AAssetManager_open(assets_manager, "model.tflite", AASSET_MODE_BUFFER);
 
     model_size= AAsset_getLength(model);
     model_buffer=(char*) malloc(sizeof (char)* model_size);
@@ -66,12 +66,14 @@ Java_com_crescenzi_objecter_ObjectDetectionActivity_destroyDetector(JNIEnv *env,
 JNIEXPORT jfloatArray JNICALL
 Java_com_crescenzi_objecter_ObjectDetectionActivity_detect(JNIEnv *env, jobject thiz,
                                                            jbyteArray bytes, jint width,
-                                                           jint height) {
+                                                           jint height,jint rotation) {
 
     jbyte * _rgba= env->GetByteArrayElements(bytes, JNI_FALSE);
 
     Mat frame(height, width, CV_8UC4, _rgba);
     cvtColor(frame, frame, COLOR_RGBA2BGRA); // (R, G, B, A)  →  (B, G, R, A)
+
+    rotateMat(frame, rotation);
 
     env->ReleaseByteArrayElements(bytes, _rgba, 0);
 

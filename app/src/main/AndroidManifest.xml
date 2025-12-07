@@ -11,9 +11,9 @@
     <application
         android:icon="@drawable/main_icon"
         android:label="objecter"
-        android:roundIcon="@drawable/main_icon"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         <activity
+            android:screenOrientation="landscape"
             android:name=".ObjectDetectionActivity"
             android:exported="true">
             <intent-filter>

@@ -4,6 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#0d3863"
     tools:context=".ObjectDetectionActivity">
 
     <!-- For the camera -->
@@ -31,7 +32,8 @@
         android:layout_marginStart="10dp"
         android:layout_marginBottom="10dp"
         android:text="100ms"
-        android:textColor="#FF0000"
+        android:textSize="40sp"
+        android:textColor="#EA33F7"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
 

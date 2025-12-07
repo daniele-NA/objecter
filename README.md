@@ -30,7 +30,7 @@ This application **does not support Android devices requiring 16 KB aligned memo
 
 ## Setup 🔧
 
-Before building the project,DOWNLOAD `tools.zip` from release panel file,unzip and place its contents under the `jni/` directory in the project root:
+Before building the project,DOWNLOAD `tools.zip` from release panel,unzip and place its contents under the `jni/` directory in the project root:
 
 ```text
 project-root/
